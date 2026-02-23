@@ -49,8 +49,39 @@ body { font-family: 'Segoe UI',system-ui,-apple-system,sans-serif; background:va
 .content-body { flex:1; overflow-y:auto; padding:20px 30px; display:flex; flex-direction:column; gap:20px; }
 
 /* Canvas area */
-.canvas-wrap { position:relative; background:var(--bg2); border-radius:12px; border:1px solid #222244; overflow:hidden; }
-canvas { display:block; width:100%; height:auto; }
+.canvas-wrap { position:relative; background:var(--bg2); border-radius:12px; border:1px solid #222244; overflow:hidden; cursor:grab; }
+.canvas-wrap.panning { cursor:grabbing; }
+canvas { display:block; width:100%; height:auto; touch-action:none; }
+
+/* Zoom indicator */
+.zoom-indicator {
+  position:absolute; top:12px; right:12px;
+  background:rgba(10,10,26,0.85); border:1px solid #333355;
+  border-radius:8px; padding:6px 12px;
+  font-size:0.75rem; font-family:monospace;
+  color:var(--green); pointer-events:none;
+  transition: opacity 0.3s;
+  z-index:10;
+}
+.zoom-controls {
+  position:absolute; bottom:12px; right:12px;
+  display:flex; gap:4px; z-index:10;
+}
+.zoom-btn {
+  width:32px; height:32px; border-radius:6px;
+  background:rgba(10,10,26,0.85); border:1px solid #333355;
+  color:var(--text); font-size:1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.zoom-btn:hover { background:var(--accent); border-color:var(--accent); }
+.zoom-hint {
+  position:absolute; bottom:12px; left:12px;
+  background:rgba(10,10,26,0.7); border:1px solid #222244;
+  border-radius:6px; padding:4px 8px;
+  font-size:0.65rem; color:var(--text2);
+  pointer-events:none; z-index:10;
+}
 
 /* Controls */
 .controls { background:var(--bg2); border-radius:12px; border:1px solid #222244; padding:20px; }
@@ -74,6 +105,26 @@ canvas { display:block; width:100%; height:auto; }
 .formula-block { background:var(--bg); padding:12px 16px; border-radius:8px; margin:10px 0; font-family:'Courier New',monospace; color:var(--green); font-size:0.85rem; line-height:1.8; }
 .nature-examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
 .nature-tag { padding:4px 10px; background:var(--bg); border-radius:12px; font-size:0.75rem; color:var(--text2); border:1px solid #222244; }
+
+/* Knowledge Links */
+.knowledge-panel { background:var(--bg2); border-radius:12px; border:1px solid #222244; padding:20px; }
+.knowledge-panel h3 { font-size:0.9rem; color:var(--accent2); margin-bottom:14px; text-transform:uppercase; letter-spacing:1px; }
+.knowledge-group { margin-bottom:14px; }
+.knowledge-group:last-child { margin-bottom:0; }
+.knowledge-group-title { font-size:0.75rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #222244; }
+.knowledge-link {
+  display:flex; align-items:flex-start; gap:10px; padding:8px 12px;
+  background:var(--bg); border-radius:8px; margin-bottom:6px;
+  text-decoration:none; color:var(--text); transition:all .2s;
+  border:1px solid transparent;
+}
+.knowledge-link:hover { border-color:var(--accent); background:var(--bg3); }
+.knowledge-link .kl-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+.knowledge-link .kl-info { flex:1; min-width:0; }
+.knowledge-link .kl-title { font-size:0.82rem; font-weight:600; color:var(--text); }
+.knowledge-link .kl-desc { font-size:0.72rem; color:var(--text2); margin-top:2px; line-height:1.4; }
+.knowledge-link .kl-arrow { color:var(--text2); font-size:0.8rem; margin-top:2px; transition:all .2s; }
+.knowledge-link:hover .kl-arrow { color:var(--accent); transform:translateX(2px); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width:6px; }
@@ -111,9 +162,19 @@ canvas { display:block; width:100%; height:auto; }
     <p class="subtitle" id="subtitle">Select a topic from the sidebar to explore</p>
   </div>
   <div class="content-body" id="content-body">
-    <div class="canvas-wrap"><canvas id="canvas" width="900" height="600"></canvas></div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="canvas" width="900" height="600"></canvas>
+      <div class="zoom-indicator" id="zoom-indicator">🔍 1.0×</div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="Zoom in">+</button>
+        <button class="zoom-btn" onclick="zoomOut()" title="Zoom out">−</button>
+        <button class="zoom-btn" onclick="resetView()" title="Reset view">⌂</button>
+      </div>
+      <div class="zoom-hint" id="zoom-hint">Scroll to zoom · Drag to pan · Double-click to reset</div>
+    </div>
     <div class="controls" id="controls"></div>
     <div class="info-panel" id="info"></div>
+    <div class="knowledge-panel" id="knowledge" style="display:none;"></div>
   </div>
 </div>
 
@@ -179,6 +240,181 @@ function setFilter(f, btn) {
 function filterNav() { buildNav(); }
 
 // ═══════════════════════════════════════════════
+//  Zoom & Pan System
+// ═══════════════════════════════════════════════
+let viewZoom = 1.0;
+let viewPanX = 0;
+let viewPanY = 0;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 10;
+
+// Pan state
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panStartViewX = 0, panStartViewY = 0;
+
+// Touch state
+let lastTouchDist = 0;
+let lastTouchMidX = 0, lastTouchMidY = 0;
+let touchPanning = false;
+
+function updateZoomIndicator() {
+  const el = document.getElementById('zoom-indicator');
+  if (el) el.textContent = `🔍 ${viewZoom.toFixed(1)}×`;
+}
+
+function resetView() {
+  viewZoom = 1.0;
+  viewPanX = 0;
+  viewPanY = 0;
+  updateZoomIndicator();
+  draw();
+}
+
+function zoomIn() {
+  viewZoom = Math.min(MAX_ZOOM, viewZoom * 1.3);
+  updateZoomIndicator();
+  draw();
+}
+
+function zoomOut() {
+  viewZoom = Math.max(MIN_ZOOM, viewZoom / 1.3);
+  updateZoomIndicator();
+  draw();
+}
+
+function applyViewTransform() {
+  ctx.save();
+  ctx.translate(ctx.w / 2, ctx.h / 2);
+  ctx.scale(viewZoom, viewZoom);
+  ctx.translate(-ctx.w / 2 + viewPanX, -ctx.h / 2 + viewPanY);
+}
+
+function restoreViewTransform() {
+  ctx.restore();
+}
+
+// Mouse wheel zoom
+const canvasWrap = document.getElementById('canvas-wrap');
+canvasWrap.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Convert mouse position to canvas coordinates
+  const canvasX = (mouseX / rect.width) * ctx.w;
+  const canvasY = (mouseY / rect.height) * ctx.h;
+
+  const oldZoom = viewZoom;
+  const zoomFactor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+  viewZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewZoom * zoomFactor));
+
+  // Adjust pan to zoom toward mouse position
+  const zoomChange = viewZoom / oldZoom;
+  const cx = ctx.w / 2, cy = ctx.h / 2;
+  // Point in world coords under cursor: worldX = (canvasX - cx)/oldZoom + cx - panX
+  // We want same point under cursor after zoom
+  viewPanX = viewPanX - (canvasX - cx) * (1/viewZoom - 1/oldZoom);
+  viewPanY = viewPanY - (canvasY - cy) * (1/viewZoom - 1/oldZoom);
+
+  updateZoomIndicator();
+  draw();
+}, { passive: false });
+
+// Mouse drag pan
+canvas.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return;
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartViewX = viewPanX;
+  panStartViewY = viewPanY;
+  canvasWrap.classList.add('panning');
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', function(e) {
+  if (!isPanning) return;
+  const rect = canvas.getBoundingClientRect();
+  const dx = (e.clientX - panStartX) / rect.width * ctx.w / viewZoom;
+  const dy = (e.clientY - panStartY) / rect.height * ctx.h / viewZoom;
+  viewPanX = panStartViewX + dx;
+  viewPanY = panStartViewY + dy;
+  draw();
+});
+
+window.addEventListener('mouseup', function() {
+  isPanning = false;
+  canvasWrap.classList.remove('panning');
+});
+
+// Double-click to reset
+canvas.addEventListener('dblclick', function(e) {
+  e.preventDefault();
+  resetView();
+});
+
+// Touch support
+canvas.addEventListener('touchstart', function(e) {
+  if (e.touches.length === 1) {
+    touchPanning = true;
+    panStartX = e.touches[0].clientX;
+    panStartY = e.touches[0].clientY;
+    panStartViewX = viewPanX;
+    panStartViewY = viewPanY;
+  } else if (e.touches.length === 2) {
+    touchPanning = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    lastTouchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    lastTouchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    panStartViewX = viewPanX;
+    panStartViewY = viewPanY;
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  if (e.touches.length === 1 && touchPanning) {
+    const rect = canvas.getBoundingClientRect();
+    const dx = (e.touches[0].clientX - panStartX) / rect.width * ctx.w / viewZoom;
+    const dy = (e.touches[0].clientY - panStartY) / rect.height * ctx.h / viewZoom;
+    viewPanX = panStartViewX + dx;
+    viewPanY = panStartViewY + dy;
+    draw();
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (lastTouchDist > 0) {
+      const scale = dist / lastTouchDist;
+      viewZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewZoom * scale));
+      updateZoomIndicator();
+    }
+    lastTouchDist = dist;
+
+    // Also pan with two fingers
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const rect = canvas.getBoundingClientRect();
+    viewPanX += (midX - lastTouchMidX) / rect.width * ctx.w / viewZoom;
+    viewPanY += (midY - lastTouchMidY) / rect.height * ctx.h / viewZoom;
+    lastTouchMidX = midX;
+    lastTouchMidY = midY;
+
+    draw();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  if (e.touches.length < 2) lastTouchDist = 0;
+  if (e.touches.length === 0) touchPanning = false;
+});
+
+// ═══════════════════════════════════════════════
 //  Canvas & Animation
 // ═══════════════════════════════════════════════
 const canvas = document.getElementById('canvas');
@@ -200,8 +436,12 @@ function resize() {
 window.addEventListener('resize', resize);
 
 function clear() {
+  // Clear the entire canvas (ignoring transform) then re-apply
+  ctx.save();
+  ctx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
   ctx.fillStyle = '#0a0a1a';
-  ctx.fillRect(0, 0, ctx.w, ctx.h);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════
@@ -209,6 +449,7 @@ function clear() {
 // ═══════════════════════════════════════════════
 function drawPhyllotaxis() {
   clear();
+  applyViewTransform();
   const n = params.count || 500;
   const angle = (params.angle || 137.508) * Math.PI / 180;
   const scale = params.scale || 4;
@@ -239,6 +480,7 @@ function drawPhyllotaxis() {
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.font = '12px monospace';
   ctx.fillText(`n=${n}  angle=${(params.angle||137.508).toFixed(3)}°`, 10, ctx.h - 10);
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -246,10 +488,10 @@ function drawPhyllotaxis() {
 // ═══════════════════════════════════════════════
 function drawFern() {
   clear();
+  applyViewTransform();
   const n = params.iterations || 50000;
   let x = 0, y = 0;
   const pts = [];
-  // Seeded RNG for reproducibility
   let seed = 42;
   const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
   const transforms = [
@@ -276,6 +518,7 @@ function drawFern() {
     ctx.fillStyle = `rgb(30,${green},50)`;
     ctx.fillRect(px, py, 1.2, 1.2);
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -283,11 +526,11 @@ function drawFern() {
 // ═══════════════════════════════════════════════
 function drawKoch() {
   clear();
+  applyViewTransform();
   const iter = Math.min(params.koch_iter || 4, 7);
   const s = Math.min(ctx.w, ctx.h) * 0.7;
   const h = s * Math.sqrt(3) / 2;
   const cx = ctx.w / 2, cy = ctx.h / 2;
-  // Initial triangle
   let pts = [
     {x:cx, y:cy - h*2/3},
     {x:cx + s/2, y:cy + h/3},
@@ -323,12 +566,10 @@ function drawKoch() {
   ctx.stroke();
   ctx.fillStyle = 'rgba(79,195,247,0.05)';
   ctx.fill();
-  // Stats
-  const perimeter = s * Math.pow(4/3, iter);
-  const area = s*s*Math.sqrt(3)/4 * (1 + (1/3)*(1-Math.pow(4/9,iter))/(1-4/9)*3);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '11px monospace';
   ctx.fillText(`iterations=${iter}  segments=${pts.length-1}  rel.perimeter=${(Math.pow(4/3,iter)).toFixed(2)}×`, 10, ctx.h-10);
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -336,10 +577,11 @@ function drawKoch() {
 // ═══════════════════════════════════════════════
 function drawMandelbrot() {
   clear();
+  // Mandelbrot uses putImageData which ignores transforms, so we handle zoom differently
   const maxIter = params.mandel_iter || 80;
-  const zoom = params.mandel_zoom || 1;
-  const cx = params.mandel_cx || -0.5;
-  const cy = params.mandel_cy || 0;
+  const zoom = (params.mandel_zoom || 1) * viewZoom;
+  const cx = (params.mandel_cx || -0.5) - viewPanX / ctx.w * 2 / (params.mandel_zoom || 1);
+  const cy = (params.mandel_cy || 0) - viewPanY / ctx.h * 2 / (params.mandel_zoom || 1);
   const w = ctx.w, h = ctx.h;
   const imgData = ctx.createImageData(w, h);
   const aspect = w / h;
@@ -381,6 +623,7 @@ function drawMandelbrot() {
 // ═══════════════════════════════════════════════
 function drawSpirals() {
   clear();
+  applyViewTransform();
   const type = params.spiral_type || 'golden';
   const turns = params.spiral_turns || 6;
   const nPts = params.spiral_pts || 2000;
@@ -396,19 +639,17 @@ function drawSpirals() {
     if (type === 'logarithmic') r = 2 * Math.exp(0.12 * theta);
     else if (type === 'archimedean') r = 3 * theta;
     else if (type === 'fermat') r = 15 * Math.sqrt(theta);
-    else r = 2 * Math.exp(Math.log(phi) / (Math.PI/2) * theta); // golden
+    else r = 2 * Math.exp(Math.log(phi) / (Math.PI/2) * theta);
     pts.push({x:cx+r*Math.cos(theta), y:cy+r*Math.sin(theta), t, theta});
   }
-  // Clip to canvas
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0,0,ctx.w,ctx.h);
+  ctx.rect(-ctx.w, -ctx.h, ctx.w*3, ctx.h*3);
   ctx.clip();
-  // Draw
   ctx.beginPath();
   let started = false;
   for (const p of pts) {
-    if (p.x < -100 || p.x > ctx.w+100 || p.y < -100 || p.y > ctx.h+100) { started=false; continue; }
+    if (p.x < -500 || p.x > ctx.w+500 || p.y < -500 || p.y > ctx.h+500) { started=false; continue; }
     if (!started) { ctx.moveTo(p.x,p.y); started=true; }
     else ctx.lineTo(p.x,p.y);
   }
@@ -419,13 +660,12 @@ function drawSpirals() {
   ctx.shadowBlur = 8;
   ctx.stroke();
   ctx.restore();
-  // Draw mirror spiral for golden/log
   if (type === 'golden' || type === 'logarithmic') {
     ctx.beginPath();
     started = false;
     for (const p of pts) {
       const mx = 2*cx - p.x, my = 2*cy - p.y;
-      if (mx < -100||mx>ctx.w+100||my<-100||my>ctx.h+100) { started=false; continue; }
+      if (mx < -500||mx>ctx.w+500||my<-500||my>ctx.h+500) { started=false; continue; }
       if (!started) { ctx.moveTo(mx,my); started=true; }
       else ctx.lineTo(mx,my);
     }
@@ -433,6 +673,7 @@ function drawSpirals() {
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -440,6 +681,7 @@ function drawSpirals() {
 // ═══════════════════════════════════════════════
 function drawLorenz() {
   clear();
+  applyViewTransform();
   const sigma = params.lorenz_sigma || 10;
   const rho = params.lorenz_rho || 28;
   const beta = params.lorenz_beta || 2.667;
@@ -454,7 +696,6 @@ function drawLorenz() {
     x+=dx*dt; y+=dy*dt; z+=dz*dt;
     pts.push({x,y:z,t:i/steps});
   }
-  // Scale to canvas
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for(const p of pts){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);}
   const sx=(ctx.w-80)/(maxX-minX),sy=(ctx.h-80)/(maxY-minY);
@@ -467,7 +708,6 @@ function drawLorenz() {
   ctx.strokeStyle='rgba(255,107,107,0.4)';
   ctx.lineWidth=0.5;
   ctx.stroke();
-  // Color trail
   for(let i=1;i<pts.length;i+=3){
     const px=40+(pts[i].x-minX)*sx;
     const py=ctx.h-40-(pts[i].y-minY)*sy;
@@ -475,6 +715,7 @@ function drawLorenz() {
     ctx.fillStyle=`hsla(${hue},80%,60%,0.6)`;
     ctx.fillRect(px-0.5,py-0.5,1,1);
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -482,6 +723,7 @@ function drawLorenz() {
 // ═══════════════════════════════════════════════
 function drawLogistic() {
   clear();
+  applyViewTransform();
   const rMin = params.logistic_rmin || 2.5;
   const rMax = params.logistic_rmax || 4.0;
   const warmup = 200;
@@ -499,14 +741,12 @@ function drawLogistic() {
       ctx.fillRect(px, py, 1.5, 1.5);
     }
   }
-  // Axis labels
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '11px monospace';
   ctx.fillText(`r = ${rMin.toFixed(1)}`, 10, ctx.h - 10);
   ctx.fillText(`r = ${rMax.toFixed(1)}`, ctx.w - 60, ctx.h - 10);
   ctx.fillText('x', 10, 20);
 
-  // Mark Feigenbaum point ≈ 3.5699...
   const feigX = (3.5699 - rMin) / (rMax - rMin) * w;
   if (feigX > 0 && feigX < w) {
     ctx.strokeStyle = 'rgba(255,215,0,0.3)';
@@ -519,6 +759,7 @@ function drawLogistic() {
     ctx.fillStyle = 'rgba(255,215,0,0.6)';
     ctx.fillText('δ ≈ 3.5699', feigX + 4, 20);
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -526,6 +767,7 @@ function drawLogistic() {
 // ═══════════════════════════════════════════════
 function drawLSystem() {
   clear();
+  applyViewTransform();
   const type = params.lsys_type || 'plant';
   const iter = Math.min(params.lsys_iter || 5, 7);
   const angle = (params.lsys_angle || 25) * Math.PI / 180;
@@ -545,7 +787,6 @@ function drawLSystem() {
     for (const ch of str) next += sys.rules[ch] || ch;
     str = next;
   }
-  // Interpret
   const segs = [];
   let x=0,y=0,a=-Math.PI/2,depth=0;
   const stack = [];
@@ -559,7 +800,7 @@ function drawLSystem() {
     else if (ch==='[') { stack.push({x,y,a,depth}); depth++; }
     else if (ch===']'&&stack.length) { const s=stack.pop(); x=s.x;y=s.y;a=s.a;depth=s.depth; }
   }
-  if(!segs.length)return;
+  if(!segs.length){ restoreViewTransform(); return; }
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for(const s of segs){minX=Math.min(minX,s.x1,s.x2);maxX=Math.max(maxX,s.x1,s.x2);minY=Math.min(minY,s.y1,s.y2);maxY=Math.max(maxY,s.y1,s.y2);}
   const dw=maxX-minX||1, dh=maxY-minY||1;
@@ -576,6 +817,7 @@ function drawLSystem() {
     ctx.lineCap='round';
     ctx.stroke();
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -588,7 +830,6 @@ function initTuring() {
   const size = params.turing_size || 100;
   const grid = { w:size, h:size, a:new Float32Array(size*size), b:new Float32Array(size*size) };
   for(let i=0;i<size*size;i++){grid.a[i]=1;grid.b[i]=0;}
-  // Seed
   let seed=42;
   const rand=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
   for(let s=0;s<6;s++){
@@ -626,19 +867,32 @@ function drawTuring() {
   if(!turingGrid)initTuring();
   stepTuring(params.turing_batch||20);
   const g=turingGrid;
+  // Turing uses putImageData, handle zoom via CSS-like approach
+  // We'll draw to an offscreen buffer then draw it with transform
   const scale=Math.min(Math.floor(ctx.w/g.w),Math.floor(ctx.h/g.h));
-  const ox=(ctx.w-g.w*scale)/2, oy=(ctx.h-g.h*scale)/2;
-  const imgData=ctx.createImageData(g.w*scale,g.h*scale);
+  const imgW = g.w*scale, imgH = g.h*scale;
+  const ox=(ctx.w-imgW)/2, oy=(ctx.h-imgH)/2;
+  const imgData=ctx.createImageData(imgW,imgH);
   for(let y=0;y<g.h;y++)for(let x=0;x<g.w;x++){
     const v=g.b[y*g.w+x];
     const r=Math.floor(v*255),gr=Math.floor(v*0.6*255),b=Math.min(255,50+Math.floor(v*128));
     for(let sy=0;sy<scale;sy++)for(let sx=0;sx<scale;sx++){
-      const idx=((y*scale+sy)*g.w*scale+(x*scale+sx))*4;
+      const idx=((y*scale+sy)*imgW+(x*scale+sx))*4;
       imgData.data[idx]=r;imgData.data[idx+1]=gr;imgData.data[idx+2]=b;imgData.data[idx+3]=255;
     }
   }
+  // Create temp canvas for the image data, then draw with transform
   clear();
-  ctx.putImageData(imgData,ox,oy);
+  if (!drawTuring._tmpCanvas) {
+    drawTuring._tmpCanvas = document.createElement('canvas');
+  }
+  const tmp = drawTuring._tmpCanvas;
+  tmp.width = imgW;
+  tmp.height = imgH;
+  tmp.getContext('2d').putImageData(imgData, 0, 0);
+  applyViewTransform();
+  ctx.drawImage(tmp, ox, oy);
+  restoreViewTransform();
 }
 
 let turingAnimId=null;
@@ -652,6 +906,7 @@ function animateTuring(){
 // ═══════════════════════════════════════════════
 function drawTessellation() {
   clear();
+  applyViewTransform();
   const type = params.tess_type || 'hexagon';
   const size = params.tess_size || 30;
   const cx = ctx.w, cy = ctx.h;
@@ -681,7 +936,6 @@ function drawTessellation() {
       }
     }
   } else if (type === 'voronoi') {
-    // Simple Voronoi via distance
     let seed = 42;
     const rand = () => { seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
     const nPts = params.tess_points || 40;
@@ -699,7 +953,6 @@ function drawTessellation() {
         ctx.fillRect(x, y, step, step);
       }
     }
-    // Draw edges
     for (const s of sites) {
       ctx.beginPath();
       ctx.arc(s.x, s.y, 3, 0, Math.PI*2);
@@ -707,6 +960,7 @@ function drawTessellation() {
       ctx.fill();
     }
   }
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -714,15 +968,13 @@ function drawTessellation() {
 // ═══════════════════════════════════════════════
 function drawFibonacci() {
   clear();
+  applyViewTransform();
   const n = params.fib_count || 10;
   const fibs = [1,1];
   for(let i=2;i<n;i++) fibs.push(fibs[i-1]+fibs[i-2]);
-  // Calculate total size
   const cx=ctx.w/2, cy=ctx.h/2;
   const maxFib = fibs[fibs.length-1];
   const scale = Math.min(ctx.w,ctx.h)*0.4/maxFib;
-
-  // Draw golden rectangles
   let x=cx,y=cy,dir=0;
   const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#9b59b6','#e74c3c','#f39c12','#2ecc71','#3498db','#8e44ad','#e67e22','#1abc9c'];
 
@@ -731,14 +983,12 @@ function drawFibonacci() {
     ctx.strokeStyle=colors[i%colors.length];
     ctx.lineWidth=2;
     ctx.globalAlpha=0.4;
-    // Rectangle
     let rx,ry;
     if(dir===0){rx=x;ry=y-s;}
     else if(dir===1){rx=x;ry=y;}
     else if(dir===2){rx=x-s;ry=y;}
     else{rx=x-s;ry=y-s;}
     ctx.strokeRect(rx,ry,s,s);
-    // Arc
     ctx.globalAlpha=0.9;
     ctx.beginPath();
     let startAngle,arcCX,arcCY;
@@ -750,7 +1000,6 @@ function drawFibonacci() {
     ctx.strokeStyle=colors[i%colors.length];
     ctx.lineWidth=2.5;
     ctx.stroke();
-    // Move to next position
     if(dir===0){x=rx+s;y=ry;}
     else if(dir===1){x=rx+s;y=ry+s;}
     else if(dir===2){x=rx;y=ry+s;}
@@ -758,10 +1007,10 @@ function drawFibonacci() {
     dir=(dir+1)%4;
   }
   ctx.globalAlpha=1;
-  // Label
   ctx.fillStyle='rgba(255,255,255,0.5)';
   ctx.font='12px monospace';
   ctx.fillText(`Fibonacci: ${fibs.join(', ')}`,10,ctx.h-10);
+  restoreViewTransform();
 }
 
 // ═══════════════════════════════════════════════
@@ -769,32 +1018,28 @@ function drawFibonacci() {
 // ═══════════════════════════════════════════════
 function drawSymmetry() {
   clear();
+  applyViewTransform();
   const type = params.sym_type || 'radial';
   const folds = params.sym_folds || 6;
   const cx = ctx.w/2, cy = ctx.h/2;
   const maxR = Math.min(cx,cy)*0.8;
 
   if (type === 'radial') {
-    // Snowflake-like radial symmetry
     for (let f = 0; f < folds; f++) {
       const baseAngle = (f / folds) * Math.PI * 2;
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(baseAngle);
-      // Draw a decorative arm
       drawSymArm(maxR, folds);
-      // Mirror
       ctx.scale(1, -1);
       drawSymArm(maxR, folds);
       ctx.restore();
     }
   } else if (type === 'bilateral') {
-    // Butterfly-like bilateral symmetry
     const wing = (side) => {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(side, 1);
-      // Wing shape
       for (let i = 0; i < 5; i++) {
         const r = maxR * (0.3 + i * 0.15);
         const hue = i * 60;
@@ -806,7 +1051,6 @@ function drawSymmetry() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      // Body line
       ctx.beginPath();
       ctx.moveTo(0, -maxR*0.6);
       ctx.lineTo(0, maxR*0.6);
@@ -817,7 +1061,6 @@ function drawSymmetry() {
     };
     wing(1);
     wing(-1);
-    // Axis
     ctx.setLineDash([5,5]);
     ctx.beginPath();
     ctx.moveTo(cx, cy-maxR);
@@ -827,6 +1070,7 @@ function drawSymmetry() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  restoreViewTransform();
 }
 
 function drawSymArm(maxR, folds) {
@@ -835,14 +1079,12 @@ function drawSymArm(maxR, folds) {
     const r = maxR * (b + 1) / branches;
     const size = maxR / branches * 0.4;
     const hue = b * 90 + 180;
-    // Main branch
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(r, 0);
     ctx.strokeStyle = `hsl(${hue},60%,60%)`;
     ctx.lineWidth = 2 - b * 0.3;
     ctx.stroke();
-    // Crystal tips
     ctx.beginPath();
     ctx.moveTo(r, 0);
     ctx.lineTo(r + size * 0.7, -size * 0.4);
@@ -851,7 +1093,6 @@ function drawSymArm(maxR, folds) {
     ctx.strokeStyle = `hsl(${hue},50%,70%)`;
     ctx.lineWidth = 1;
     ctx.stroke();
-    // Dot
     ctx.beginPath();
     ctx.arc(r, 0, 3, 0, Math.PI*2);
     ctx.fillStyle = `hsl(${hue},60%,70%)`;
@@ -881,6 +1122,111 @@ function draw() {
   };
   const fn = drawFns[currentCat];
   if (fn) fn();
+}
+
+// ═══════════════════════════════════════════════
+//  Knowledge Links Data
+// ═══════════════════════════════════════════════
+const knowledgeLinks = {
+  phyllotaxis: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Phyllotaxis', desc:'Comprehensive overview of phyllotactic patterns in plants', url:'https://en.wikipedia.org/wiki/Phyllotaxis' },
+    { type:'paper', icon:'📄', title:'Douady & Couder (1992)', desc:'Phyllotaxis as a Physical Self-Organized Growth Process — the landmark paper on spiral phyllotaxis', url:'https://doi.org/10.1103/PhysRevLett.68.2098' },
+    { type:'video', icon:'🎥', title:'Vi Hart: Fibonacci Spirals', desc:'Doodling in Math — an entertaining YouTube series on spirals in nature', url:'https://www.youtube.com/watch?v=ahXIMUkSXX0' },
+    { type:'web', icon:'🔗', title:'Khan Academy: Fibonacci Sequence', desc:'Interactive lessons on the Fibonacci sequence and its properties', url:'https://www.khanacademy.org/math/math-for-fun-and-glory/vi-hart/spirals-702702/v/doodling-in-math-spirals-fibonacci-and-being-a-plant-1-of-3' },
+  ],
+  fractals_fern: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Fractal', desc:'Overview of fractals, self-similarity, and fractal dimension', url:'https://en.wikipedia.org/wiki/Fractal' },
+    { type:'book', icon:'📖', title:'The Fractal Geometry of Nature', desc:'Benoît Mandelbrot\'s seminal 1982 book that introduced fractals to the world', url:'https://en.wikipedia.org/wiki/The_Fractal_Geometry_of_Nature' },
+    { type:'video', icon:'🎥', title:'3Blue1Brown: Fractals', desc:'Beautiful visual explanations of fractal geometry and self-similarity', url:'https://www.youtube.com/watch?v=gB9n2gHsHN4' },
+    { type:'web', icon:'🔗', title:'Fractal Foundation', desc:'Educational resources about fractals with interactive explorations', url:'https://fractalfoundation.org' },
+  ],
+  fractals_koch: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Fractal', desc:'Overview of fractals, self-similarity, and fractal dimension', url:'https://en.wikipedia.org/wiki/Fractal' },
+    { type:'book', icon:'📖', title:'The Fractal Geometry of Nature', desc:'Benoît Mandelbrot\'s seminal 1982 book that introduced fractals to the world', url:'https://en.wikipedia.org/wiki/The_Fractal_Geometry_of_Nature' },
+    { type:'video', icon:'🎥', title:'3Blue1Brown: Fractals', desc:'Beautiful visual explanations of fractal geometry and self-similarity', url:'https://www.youtube.com/watch?v=gB9n2gHsHN4' },
+    { type:'web', icon:'🔗', title:'Fractal Foundation', desc:'Educational resources about fractals with interactive explorations', url:'https://fractalfoundation.org' },
+  ],
+  fractals_mandelbrot: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Fractal', desc:'Overview of fractals, self-similarity, and fractal dimension', url:'https://en.wikipedia.org/wiki/Fractal' },
+    { type:'book', icon:'📖', title:'The Fractal Geometry of Nature', desc:'Benoît Mandelbrot\'s seminal 1982 book that introduced fractals to the world', url:'https://en.wikipedia.org/wiki/The_Fractal_Geometry_of_Nature' },
+    { type:'video', icon:'🎥', title:'3Blue1Brown: Fractals', desc:'Beautiful visual explanations of fractal geometry and self-similarity', url:'https://www.youtube.com/watch?v=gB9n2gHsHN4' },
+    { type:'web', icon:'🔗', title:'Fractal Foundation', desc:'Educational resources about fractals with interactive explorations', url:'https://fractalfoundation.org' },
+  ],
+  spirals: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Logarithmic Spiral', desc:'The mathematics behind the most common spiral in nature', url:'https://en.wikipedia.org/wiki/Logarithmic_spiral' },
+    { type:'web', icon:'🔗', title:'Wolfram MathWorld: Spirals', desc:'Comprehensive mathematical reference for all types of spiral curves', url:'https://mathworld.wolfram.com/Spiral.html' },
+    { type:'web', icon:'🔗', title:'Nature\'s Spirals', desc:'How logarithmic spirals appear in nautilus shells, galaxies, and hurricanes', url:'https://en.wikipedia.org/wiki/Spiral#In_nature' },
+  ],
+  chaos_lorenz: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Chaos Theory', desc:'Introduction to chaos theory, strange attractors, and sensitive dependence', url:'https://en.wikipedia.org/wiki/Chaos_theory' },
+    { type:'paper', icon:'📄', title:'Lorenz (1963)', desc:'"Deterministic Nonperiodic Flow" — the paper that launched chaos theory', url:'https://doi.org/10.1175/1520-0469(1963)020<0130:DNF>2.0.CO;2' },
+    { type:'video', icon:'🎥', title:'Veritasium: Chaos Theory', desc:'This equation will change how you see the world — a popular science exploration', url:'https://www.youtube.com/watch?v=ovJcsL7vyrk' },
+    { type:'book', icon:'📖', title:'Nonlinear Dynamics and Chaos', desc:'Steven Strogatz\'s classic textbook — the gold standard for learning chaos theory', url:'https://www.stevenstrogatz.com/books/nonlinear-dynamics-and-chaos-with-applications-to-physics-biology-chemistry-and-engineering' },
+  ],
+  chaos_logistic: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Chaos Theory', desc:'Introduction to chaos theory, strange attractors, and sensitive dependence', url:'https://en.wikipedia.org/wiki/Chaos_theory' },
+    { type:'paper', icon:'📄', title:'Lorenz (1963)', desc:'"Deterministic Nonperiodic Flow" — the paper that launched chaos theory', url:'https://doi.org/10.1175/1520-0469(1963)020<0130:DNF>2.0.CO;2' },
+    { type:'video', icon:'🎥', title:'Veritasium: Chaos Theory', desc:'This equation will change how you see the world — a popular science exploration', url:'https://www.youtube.com/watch?v=ovJcsL7vyrk' },
+    { type:'book', icon:'📖', title:'Nonlinear Dynamics and Chaos', desc:'Steven Strogatz\'s classic textbook — the gold standard for learning chaos theory', url:'https://www.stevenstrogatz.com/books/nonlinear-dynamics-and-chaos-with-applications-to-physics-biology-chemistry-and-engineering' },
+  ],
+  lsystem: [
+    { type:'web', icon:'🔗', title:'Wikipedia: L-System', desc:'Formal grammar systems invented by Aristid Lindenmayer for modeling plant growth', url:'https://en.wikipedia.org/wiki/L-system' },
+    { type:'book', icon:'📖', title:'The Algorithmic Beauty of Plants', desc:'Lindenmayer & Prusinkiewicz — the definitive reference, available as a free PDF', url:'http://algorithmicbotany.org/papers/#abop' },
+    { type:'web', icon:'🔗', title:'Paul Bourke: L-System', desc:'Detailed examples and implementations of various L-system types', url:'https://paulbourke.net/fractals/lsys/' },
+  ],
+  turing: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Turing Pattern', desc:'How reaction-diffusion systems create biological patterns', url:'https://en.wikipedia.org/wiki/Turing_pattern' },
+    { type:'paper', icon:'📄', title:'Turing (1952)', desc:'"The Chemical Basis of Morphogenesis" — Alan Turing\'s groundbreaking paper on pattern formation', url:'https://doi.org/10.1098/rstb.1952.0012' },
+    { type:'book', icon:'📖', title:'Patterns in Nature', desc:'Philip Ball\'s beautifully illustrated exploration of natural pattern formation', url:'https://en.wikipedia.org/wiki/Patterns_in_Nature' },
+    { type:'paper', icon:'📄', title:'Pearson (1993)', desc:'Complex patterns in a simple system — the Gray-Scott model parameter space exploration', url:'https://doi.org/10.1126/science.261.5118.189' },
+  ],
+  tessellation: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Tessellation', desc:'How shapes tile the plane — from regular polygons to Penrose tiles', url:'https://en.wikipedia.org/wiki/Tessellation' },
+    { type:'web', icon:'🔗', title:'Wikipedia: Voronoi Diagram', desc:'Partitioning space by nearest-neighbor distance', url:'https://en.wikipedia.org/wiki/Voronoi_diagram' },
+  ],
+  fibonacci: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Fibonacci Sequence', desc:'The famous sequence and its deep connections to the golden ratio', url:'https://en.wikipedia.org/wiki/Fibonacci_sequence' },
+    { type:'web', icon:'🔗', title:'Wikipedia: Golden Ratio', desc:'φ = 1.618... — the most irrational number and its role in nature and art', url:'https://en.wikipedia.org/wiki/Golden_ratio' },
+    { type:'video', icon:'🎥', title:'Numberphile: Fibonacci', desc:'Engaging explorations of Fibonacci numbers and where they appear', url:'https://www.youtube.com/watch?v=Nu-lW-Ifyec' },
+  ],
+  symmetry: [
+    { type:'web', icon:'🔗', title:'Wikipedia: Symmetry in Biology', desc:'How and why symmetry evolved in living organisms', url:'https://en.wikipedia.org/wiki/Symmetry_in_biology' },
+    { type:'book', icon:'📖', title:'The Symmetries of Things', desc:'Conway, Burgiel & Goodman-Strauss — a visually stunning mathematics of symmetry', url:'https://en.wikipedia.org/wiki/The_Symmetries_of_Things' },
+  ],
+};
+
+function renderKnowledgeLinks(id) {
+  const panel = document.getElementById('knowledge');
+  const links = knowledgeLinks[id];
+  if (!links || !links.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  // Group by type
+  const groups = {};
+  const typeOrder = ['web','paper','book','video'];
+  const typeLabels = { web:'🔗 Web Resources', paper:'📄 Papers & Articles', book:'📖 Books', video:'🎥 Videos' };
+  for (const link of links) {
+    if (!groups[link.type]) groups[link.type] = [];
+    groups[link.type].push(link);
+  }
+
+  let html = '<h3>📚 Learn More</h3>';
+  for (const type of typeOrder) {
+    if (!groups[type]) continue;
+    html += `<div class="knowledge-group"><div class="knowledge-group-title">${typeLabels[type] || type}</div>`;
+    for (const link of groups[type]) {
+      html += `<a class="knowledge-link" href="${link.url}" target="_blank" rel="noopener noreferrer">
+  <span class="kl-icon">${link.icon}</span>
+  <div class="kl-info">
+    <div class="kl-title">${link.title}</div>
+    <div class="kl-desc">${link.desc}</div>
+  </div>
+  <span class="kl-arrow">→</span>
+</a>`;
+    }
+    html += '</div>';
+  }
+  panel.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════
@@ -1072,6 +1418,12 @@ function loadCategory(id) {
   const cfg = catConfigs[id];
   if (!cat || !cfg) return;
 
+  // Reset zoom/pan when switching categories
+  viewZoom = 1.0;
+  viewPanX = 0;
+  viewPanY = 0;
+  updateZoomIndicator();
+
   document.getElementById('title').textContent = cat.icon + ' ' + cat.label;
   document.getElementById('subtitle').textContent = cat.subtitle;
 
@@ -1098,6 +1450,9 @@ function loadCategory(id) {
 
   // Info panel
   document.getElementById('info').innerHTML = `<h3>${cfg.info.title}</h3>${cfg.info.html}`;
+
+  // Knowledge links
+  renderKnowledgeLinks(id);
 
   resize();
 }

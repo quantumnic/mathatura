@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathatura — Mathematical Beauty in Nature</title>
+<style>
+:root {
+  --bg: #0a0a1a;
+  --bg2: #12122a;
+  --bg3: #1a1a3e;
+  --text: #e0e0f0;
+  --text2: #8888aa;
+  --accent: #6c63ff;
+  --accent2: #ff6b9d;
+  --gold: #ffd700;
+  --green: #4ecdc4;
+  --sidebar-w: 280px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; height:100vh; overflow:hidden; }
+
+/* Sidebar */
+.sidebar { width:var(--sidebar-w); background:var(--bg2); border-right:1px solid #222244; display:flex; flex-direction:column; flex-shrink:0; }
+.sidebar-header { padding:20px; border-bottom:1px solid #222244; }
+.sidebar-header h1 { font-size:1.5rem; background:linear-gradient(135deg,var(--accent),var(--accent2),var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:1px; }
+.sidebar-header p { font-size:0.75rem; color:var(--text2); margin-top:4px; }
+.search-box { margin:12px 16px; padding:8px 12px; background:var(--bg3); border:1px solid #333355; border-radius:8px; color:var(--text); font-size:0.85rem; outline:none; width:calc(100% - 32px); }
+.search-box:focus { border-color:var(--accent); }
+.filters { display:flex; gap:6px; padding:0 16px 12px; flex-wrap:wrap; }
+.filter-btn { padding:3px 10px; border-radius:12px; border:1px solid #333355; background:transparent; color:var(--text2); font-size:0.7rem; cursor:pointer; transition:all .2s; }
+.filter-btn:hover, .filter-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+.nav { flex:1; overflow-y:auto; padding:8px 0; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; cursor:pointer; transition:all .15s; border-left:3px solid transparent; }
+.nav-item:hover { background:var(--bg3); }
+.nav-item.active { background:var(--bg3); border-left-color:var(--accent); }
+.nav-icon { font-size:1.2rem; width:28px; text-align:center; }
+.nav-label { font-size:0.85rem; }
+.nav-badge { margin-left:auto; font-size:0.6rem; padding:2px 6px; border-radius:8px; background:var(--bg); }
+.badge-kids { color:#4ecdc4; border:1px solid #4ecdc4; }
+.badge-teens { color:#ffd700; border:1px solid #ffd700; }
+.badge-uni { color:#ff6b6b; border:1px solid #ff6b6b; }
+
+/* Main content */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.content-header { padding:20px 30px 0; }
+.content-header h2 { font-size:1.6rem; margin-bottom:4px; }
+.content-header .subtitle { color:var(--text2); font-size:0.9rem; }
+.content-body { flex:1; overflow-y:auto; padding:20px 30px; display:flex; flex-direction:column; gap:20px; }
+
+/* Canvas area */
+.canvas-wrap { position:relative; background:var(--bg2); border-radius:12px; border:1px solid #222244; overflow:hidden; }
+canvas { display:block; width:100%; height:auto; }
+
+/* Controls */
+.controls { background:var(--bg2); border-radius:12px; border:1px solid #222244; padding:20px; }
+.controls h3 { font-size:0.9rem; color:var(--accent); margin-bottom:12px; text-transform:uppercase; letter-spacing:1px; }
+.control-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.control-item label { display:block; font-size:0.8rem; color:var(--text2); margin-bottom:4px; }
+.control-item input[type=range] { width:100%; accent-color:var(--accent); }
+.control-item .value { font-size:0.75rem; color:var(--accent); float:right; }
+.control-item select { width:100%; padding:6px 10px; background:var(--bg3); border:1px solid #333355; border-radius:6px; color:var(--text); font-size:0.85rem; }
+.btn-row { display:flex; gap:8px; margin-top:12px; }
+.btn { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-size:0.8rem; font-weight:600; transition:all .2s; }
+.btn-primary { background:var(--accent); color:white; }
+.btn-primary:hover { background:#5a52e0; }
+.btn-secondary { background:var(--bg3); color:var(--text); border:1px solid #333355; }
+
+/* Info panel */
+.info-panel { background:var(--bg2); border-radius:12px; border:1px solid #222244; padding:20px; }
+.info-panel h3 { font-size:0.9rem; color:var(--gold); margin-bottom:8px; }
+.info-panel p { font-size:0.85rem; line-height:1.6; color:var(--text2); }
+.info-panel .math { font-family:'Courier New',monospace; color:var(--green); background:var(--bg); padding:2px 6px; border-radius:4px; font-size:0.8rem; }
+.formula-block { background:var(--bg); padding:12px 16px; border-radius:8px; margin:10px 0; font-family:'Courier New',monospace; color:var(--green); font-size:0.85rem; line-height:1.8; }
+.nature-examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.nature-tag { padding:4px 10px; background:var(--bg); border-radius:12px; font-size:0.75rem; color:var(--text2); border:1px solid #222244; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#333355; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#444466; }
+
+/* Stats bar */
+.stats-bar { display:flex; gap:20px; padding:12px 0; flex-wrap:wrap; }
+.stat { text-align:center; }
+.stat-value { font-size:1.3rem; font-weight:700; color:var(--accent); }
+.stat-label { font-size:0.65rem; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>✦ Mathatura</h1>
+    <p>Mathematical Beauty in Nature</p>
+  </div>
+  <input class="search-box" type="text" placeholder="Search topics..." id="search" oninput="filterNav()">
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('kids',this)">🟢 Kids</button>
+    <button class="filter-btn" onclick="setFilter('teens',this)">🟡 Teens</button>
+    <button class="filter-btn" onclick="setFilter('uni',this)">🔴 University</button>
+  </div>
+  <div class="nav" id="nav"></div>
+</div>
+
+<div class="main">
+  <div class="content-header" id="content-header">
+    <h2 id="title">Welcome to Mathatura</h2>
+    <p class="subtitle" id="subtitle">Select a topic from the sidebar to explore</p>
+  </div>
+  <div class="content-body" id="content-body">
+    <div class="canvas-wrap"><canvas id="canvas" width="900" height="600"></canvas></div>
+    <div class="controls" id="controls"></div>
+    <div class="info-panel" id="info"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  Category definitions
+// ═══════════════════════════════════════════════
+const categories = [
+  { id:'phyllotaxis', icon:'🌻', label:'Phyllotaxis', difficulty:'kids',
+    subtitle:'How sunflowers pack seeds using the golden angle' },
+  { id:'fractals_fern', icon:'🌿', label:'Barnsley Fern', difficulty:'teens',
+    subtitle:'A fern from four simple transformations' },
+  { id:'fractals_koch', icon:'❄️', label:'Koch Snowflake', difficulty:'kids',
+    subtitle:'Infinite perimeter, finite area' },
+  { id:'fractals_mandelbrot', icon:'🔮', label:'Mandelbrot Set', difficulty:'uni',
+    subtitle:'The most complex object in mathematics' },
+  { id:'spirals', icon:'🐚', label:'Spirals', difficulty:'kids',
+    subtitle:'From nautilus shells to galaxies' },
+  { id:'chaos_lorenz', icon:'🦋', label:'Lorenz Attractor', difficulty:'uni',
+    subtitle:'The butterfly that started chaos theory' },
+  { id:'chaos_logistic', icon:'📈', label:'Logistic Map', difficulty:'teens',
+    subtitle:'From order to chaos in one equation' },
+  { id:'lsystem', icon:'🌳', label:'L-System Trees', difficulty:'teens',
+    subtitle:'Growing trees from simple grammars' },
+  { id:'turing', icon:'🐆', label:'Turing Patterns', difficulty:'uni',
+    subtitle:'How leopards get their spots' },
+  { id:'tessellation', icon:'🍯', label:'Tessellations', difficulty:'kids',
+    subtitle:'Why bees chose hexagons' },
+  { id:'fibonacci', icon:'🔢', label:'Fibonacci Spiral', difficulty:'kids',
+    subtitle:'The golden rectangle spiral' },
+  { id:'symmetry', icon:'🦋', label:'Symmetry', difficulty:'kids',
+    subtitle:'Bilateral, radial, and rotational patterns' },
+];
+
+// ═══════════════════════════════════════════════
+//  Navigation
+// ═══════════════════════════════════════════════
+let currentFilter = 'all';
+let currentCat = null;
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  const q = document.getElementById('search').value.toLowerCase();
+  categories.forEach(c => {
+    if (currentFilter !== 'all' && c.difficulty !== currentFilter) return;
+    if (q && !c.label.toLowerCase().includes(q) && !c.subtitle.toLowerCase().includes(q)) return;
+    const div = document.createElement('div');
+    div.className = 'nav-item' + (currentCat === c.id ? ' active' : '');
+    const badgeClass = c.difficulty === 'kids' ? 'badge-kids' : c.difficulty === 'teens' ? 'badge-teens' : 'badge-uni';
+    div.innerHTML = `<span class="nav-icon">${c.icon}</span><span class="nav-label">${c.label}</span><span class="nav-badge ${badgeClass}">${c.difficulty === 'kids' ? '🟢' : c.difficulty === 'teens' ? '🟡' : '🔴'}</span>`;
+    div.onclick = () => loadCategory(c.id);
+    nav.appendChild(div);
+  });
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildNav();
+}
+function filterNav() { buildNav(); }
+
+// ═══════════════════════════════════════════════
+//  Canvas & Animation
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let animId = null;
+let params = {};
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 600 * dpr;
+  canvas.style.height = '600px';
+  ctx.scale(dpr, dpr);
+  ctx.w = rect.width;
+  ctx.h = 600;
+  if (currentCat) draw();
+}
+window.addEventListener('resize', resize);
+
+function clear() {
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, ctx.w, ctx.h);
+}
+
+// ═══════════════════════════════════════════════
+//  Phyllotaxis
+// ═══════════════════════════════════════════════
+function drawPhyllotaxis() {
+  clear();
+  const n = params.count || 500;
+  const angle = (params.angle || 137.508) * Math.PI / 180;
+  const scale = params.scale || 4;
+  const cx = ctx.w / 2, cy = ctx.h / 2;
+  const colorScheme = params.colorScheme || 'spiral';
+
+  for (let i = 0; i < n; i++) {
+    const theta = i * angle;
+    const r = scale * Math.sqrt(i);
+    const x = cx + r * Math.cos(theta);
+    const y = cy + r * Math.sin(theta);
+    const t = i / n;
+    const size = 2 + t * 4;
+    let hue;
+    if (colorScheme === 'spiral') hue = (theta * 180 / Math.PI * 0.3) % 360;
+    else if (colorScheme === 'radius') hue = t * 300;
+    else if (colorScheme === 'fibonacci') {
+      const arm = Math.round(theta / (2 * Math.PI * 1.618033988749895)) % 8;
+      hue = arm * 45;
+    } else hue = 45;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = `hsl(${hue},${70+t*20}%,${45+t*15}%)`;
+    ctx.fill();
+  }
+
+  // Draw stats
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '12px monospace';
+  ctx.fillText(`n=${n}  angle=${(params.angle||137.508).toFixed(3)}°`, 10, ctx.h - 10);
+}
+
+// ═══════════════════════════════════════════════
+//  Barnsley Fern
+// ═══════════════════════════════════════════════
+function drawFern() {
+  clear();
+  const n = params.iterations || 50000;
+  let x = 0, y = 0;
+  const pts = [];
+  // Seeded RNG for reproducibility
+  let seed = 42;
+  const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const transforms = [
+    { a:0, b:0, c:0, d:0.16, e:0, f:0, p:0.01 },
+    { a:0.85, b:0.04, c:-0.04, d:0.85, e:0, f:1.6, p:0.85 },
+    { a:params.fern_a2||0.2, b:params.fern_b2||-0.26, c:0.23, d:0.22, e:0, f:1.6, p:0.07 },
+    { a:params.fern_a3||-0.15, b:params.fern_b3||0.28, c:0.26, d:0.24, e:0, f:0.44, p:0.07 },
+  ];
+  for (let i = 0; i < n; i++) {
+    const r = rand();
+    let cum = 0, t = transforms[0];
+    for (const tr of transforms) { cum += tr.p; if (r < cum) { t = tr; break; } }
+    const nx = t.a * x + t.b * y + t.e;
+    const ny = t.c * x + t.d * y + t.f;
+    x = nx; y = ny;
+    pts.push({x, y});
+  }
+  const sx = ctx.w / 6;
+  const sy = ctx.h / 11;
+  for (const p of pts) {
+    const px = ctx.w/2 + p.x * sx;
+    const py = ctx.h - p.y * sy - 10;
+    const green = 100 + Math.floor(p.y / 10 * 155);
+    ctx.fillStyle = `rgb(30,${green},50)`;
+    ctx.fillRect(px, py, 1.2, 1.2);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Koch Snowflake
+// ═══════════════════════════════════════════════
+function drawKoch() {
+  clear();
+  const iter = Math.min(params.koch_iter || 4, 7);
+  const s = Math.min(ctx.w, ctx.h) * 0.7;
+  const h = s * Math.sqrt(3) / 2;
+  const cx = ctx.w / 2, cy = ctx.h / 2;
+  // Initial triangle
+  let pts = [
+    {x:cx, y:cy - h*2/3},
+    {x:cx + s/2, y:cy + h/3},
+    {x:cx - s/2, y:cy + h/3},
+    {x:cx, y:cy - h*2/3},
+  ];
+  for (let it = 0; it < iter; it++) {
+    const np = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i], p2 = pts[i+1];
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const a = p1;
+      const b = {x:p1.x+dx/3, y:p1.y+dy/3};
+      const d = {x:p1.x+2*dx/3, y:p1.y+2*dy/3};
+      const c = {
+        x: b.x + dx/3*Math.cos(Math.PI/3) - dy/3*Math.sin(Math.PI/3),
+        y: b.y + dx/3*Math.sin(Math.PI/3) + dy/3*Math.cos(Math.PI/3),
+      };
+      np.push(a,b,c,d);
+    }
+    np.push(pts[pts.length-1]);
+    pts = np;
+  }
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  const grad = ctx.createLinearGradient(0,0,ctx.w,ctx.h);
+  grad.addColorStop(0, '#4fc3f7');
+  grad.addColorStop(0.5, '#81d4fa');
+  grad.addColorStop(1, '#b3e5fc');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(79,195,247,0.05)';
+  ctx.fill();
+  // Stats
+  const perimeter = s * Math.pow(4/3, iter);
+  const area = s*s*Math.sqrt(3)/4 * (1 + (1/3)*(1-Math.pow(4/9,iter))/(1-4/9)*3);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '11px monospace';
+  ctx.fillText(`iterations=${iter}  segments=${pts.length-1}  rel.perimeter=${(Math.pow(4/3,iter)).toFixed(2)}×`, 10, ctx.h-10);
+}
+
+// ═══════════════════════════════════════════════
+//  Mandelbrot Set
+// ═══════════════════════════════════════════════
+function drawMandelbrot() {
+  clear();
+  const maxIter = params.mandel_iter || 80;
+  const zoom = params.mandel_zoom || 1;
+  const cx = params.mandel_cx || -0.5;
+  const cy = params.mandel_cy || 0;
+  const w = ctx.w, h = ctx.h;
+  const imgData = ctx.createImageData(w, h);
+  const aspect = w / h;
+  const rangeY = 2 / zoom;
+  const rangeX = rangeY * aspect;
+
+  for (let px = 0; px < w; px++) {
+    for (let py = 0; py < h; py++) {
+      const x0 = cx + (px / w - 0.5) * rangeX;
+      const y0 = cy + (py / h - 0.5) * rangeY;
+      let x = 0, y = 0, i = 0;
+      while (x*x + y*y <= 4 && i < maxIter) {
+        const t = x*x - y*y + x0;
+        y = 2*x*y + y0;
+        x = t;
+        i++;
+      }
+      const idx = (py * w + px) * 4;
+      if (i === maxIter) {
+        imgData.data[idx] = 10;
+        imgData.data[idx+1] = 10;
+        imgData.data[idx+2] = 26;
+      } else {
+        const t = i / maxIter;
+        const smooth = i + 1 - Math.log2(Math.log2(x*x + y*y));
+        const st = smooth / maxIter;
+        imgData.data[idx] = Math.floor(9*(1-st)*st*st*st*255);
+        imgData.data[idx+1] = Math.floor(15*(1-st)*(1-st)*st*st*255);
+        imgData.data[idx+2] = Math.floor(8.5*(1-st)*(1-st)*(1-st)*st*255 + 80);
+      }
+      imgData.data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// ═══════════════════════════════════════════════
+//  Spirals
+// ═══════════════════════════════════════════════
+function drawSpirals() {
+  clear();
+  const type = params.spiral_type || 'golden';
+  const turns = params.spiral_turns || 6;
+  const nPts = params.spiral_pts || 2000;
+  const phi = 1.618033988749895;
+  const cx = ctx.w/2, cy = ctx.h/2;
+  const maxTheta = turns * 2 * Math.PI;
+  const pts = [];
+
+  for (let i = 0; i < nPts; i++) {
+    const t = i / nPts;
+    const theta = t * maxTheta;
+    let r;
+    if (type === 'logarithmic') r = 2 * Math.exp(0.12 * theta);
+    else if (type === 'archimedean') r = 3 * theta;
+    else if (type === 'fermat') r = 15 * Math.sqrt(theta);
+    else r = 2 * Math.exp(Math.log(phi) / (Math.PI/2) * theta); // golden
+    pts.push({x:cx+r*Math.cos(theta), y:cy+r*Math.sin(theta), t, theta});
+  }
+  // Clip to canvas
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,0,ctx.w,ctx.h);
+  ctx.clip();
+  // Draw
+  ctx.beginPath();
+  let started = false;
+  for (const p of pts) {
+    if (p.x < -100 || p.x > ctx.w+100 || p.y < -100 || p.y > ctx.h+100) { started=false; continue; }
+    if (!started) { ctx.moveTo(p.x,p.y); started=true; }
+    else ctx.lineTo(p.x,p.y);
+  }
+  const colors = {golden:'#ffd700',logarithmic:'#e91e63',archimedean:'#2196f3',fermat:'#4caf50'};
+  ctx.strokeStyle = colors[type] || '#ffd700';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = colors[type] || '#ffd700';
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.restore();
+  // Draw mirror spiral for golden/log
+  if (type === 'golden' || type === 'logarithmic') {
+    ctx.beginPath();
+    started = false;
+    for (const p of pts) {
+      const mx = 2*cx - p.x, my = 2*cy - p.y;
+      if (mx < -100||mx>ctx.w+100||my<-100||my>ctx.h+100) { started=false; continue; }
+      if (!started) { ctx.moveTo(mx,my); started=true; }
+      else ctx.lineTo(mx,my);
+    }
+    ctx.strokeStyle = (colors[type]||'#ffd700') + '88';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Lorenz Attractor
+// ═══════════════════════════════════════════════
+function drawLorenz() {
+  clear();
+  const sigma = params.lorenz_sigma || 10;
+  const rho = params.lorenz_rho || 28;
+  const beta = params.lorenz_beta || 2.667;
+  const steps = params.lorenz_steps || 20000;
+  const dt = 0.005;
+  let x=1,y=1,z=1;
+  const pts = [];
+  for (let i=0;i<steps;i++) {
+    const dx = sigma*(y-x);
+    const dy = x*(rho-z)-y;
+    const dz = x*y-beta*z;
+    x+=dx*dt; y+=dy*dt; z+=dz*dt;
+    pts.push({x,y:z,t:i/steps});
+  }
+  // Scale to canvas
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const p of pts){minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);}
+  const sx=(ctx.w-80)/(maxX-minX),sy=(ctx.h-80)/(maxY-minY);
+  ctx.beginPath();
+  for(let i=0;i<pts.length;i++){
+    const px=40+(pts[i].x-minX)*sx;
+    const py=ctx.h-40-(pts[i].y-minY)*sy;
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.strokeStyle='rgba(255,107,107,0.4)';
+  ctx.lineWidth=0.5;
+  ctx.stroke();
+  // Color trail
+  for(let i=1;i<pts.length;i+=3){
+    const px=40+(pts[i].x-minX)*sx;
+    const py=ctx.h-40-(pts[i].y-minY)*sy;
+    const hue=pts[i].t*300;
+    ctx.fillStyle=`hsla(${hue},80%,60%,0.6)`;
+    ctx.fillRect(px-0.5,py-0.5,1,1);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Logistic Map / Bifurcation
+// ═══════════════════════════════════════════════
+function drawLogistic() {
+  clear();
+  const rMin = params.logistic_rmin || 2.5;
+  const rMax = params.logistic_rmax || 4.0;
+  const warmup = 200;
+  const samples = 100;
+  const w = ctx.w, h = ctx.h;
+
+  ctx.fillStyle = 'rgba(108,99,255,0.15)';
+  for (let px = 0; px < w; px++) {
+    const r = rMin + (rMax - rMin) * px / w;
+    let x = 0.5;
+    for (let i = 0; i < warmup; i++) x = r * x * (1 - x);
+    for (let i = 0; i < samples; i++) {
+      x = r * x * (1 - x);
+      const py = h - (x * h);
+      ctx.fillRect(px, py, 1.5, 1.5);
+    }
+  }
+  // Axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '11px monospace';
+  ctx.fillText(`r = ${rMin.toFixed(1)}`, 10, ctx.h - 10);
+  ctx.fillText(`r = ${rMax.toFixed(1)}`, ctx.w - 60, ctx.h - 10);
+  ctx.fillText('x', 10, 20);
+
+  // Mark Feigenbaum point ≈ 3.5699...
+  const feigX = (3.5699 - rMin) / (rMax - rMin) * w;
+  if (feigX > 0 && feigX < w) {
+    ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(feigX, 0);
+    ctx.lineTo(feigX, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,215,0,0.6)';
+    ctx.fillText('δ ≈ 3.5699', feigX + 4, 20);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  L-System Trees
+// ═══════════════════════════════════════════════
+function drawLSystem() {
+  clear();
+  const type = params.lsys_type || 'plant';
+  const iter = Math.min(params.lsys_iter || 5, 7);
+  const angle = (params.lsys_angle || 25) * Math.PI / 180;
+  const step = params.lsys_step || 4;
+
+  const systems = {
+    tree: { axiom:'0', rules:{'1':'11','0':'1[0]0'}, drawChars:'01' },
+    plant: { axiom:'X', rules:{'X':'F+[[X]-X]-F[-FX]+X','F':'FF'}, drawChars:'FAB' },
+    koch: { axiom:'F', rules:{'F':'F+F-F-F+F'}, drawChars:'F' },
+    dragon: { axiom:'FX', rules:{'X':'X+YF+','Y':'-FX-Y'}, drawChars:'F' },
+    sierpinski: { axiom:'A', rules:{'A':'B-A-B','B':'A+B+A'}, drawChars:'AB' },
+  };
+  const sys = systems[type] || systems.plant;
+  let str = sys.axiom;
+  for (let i = 0; i < iter; i++) {
+    let next = '';
+    for (const ch of str) next += sys.rules[ch] || ch;
+    str = next;
+  }
+  // Interpret
+  const segs = [];
+  let x=0,y=0,a=-Math.PI/2,depth=0;
+  const stack = [];
+  for (const ch of str) {
+    if (sys.drawChars.includes(ch)) {
+      const nx=x+step*Math.cos(a), ny=y+step*Math.sin(a);
+      segs.push({x1:x,y1:y,x2:nx,y2:ny,depth});
+      x=nx;y=ny;
+    } else if (ch==='+') a+=angle;
+    else if (ch==='-') a-=angle;
+    else if (ch==='[') { stack.push({x,y,a,depth}); depth++; }
+    else if (ch===']'&&stack.length) { const s=stack.pop(); x=s.x;y=s.y;a=s.a;depth=s.depth; }
+  }
+  if(!segs.length)return;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const s of segs){minX=Math.min(minX,s.x1,s.x2);maxX=Math.max(maxX,s.x1,s.x2);minY=Math.min(minY,s.y1,s.y2);maxY=Math.max(maxY,s.y1,s.y2);}
+  const dw=maxX-minX||1, dh=maxY-minY||1;
+  const sc=Math.min((ctx.w-60)/dw,(ctx.h-60)/dh);
+  const ox=(ctx.w-dw*sc)/2-minX*sc, oy=(ctx.h-dh*sc)/2-minY*sc;
+  const md=Math.max(...segs.map(s=>s.depth),1);
+  for(const s of segs){
+    const t=s.depth/md;
+    ctx.beginPath();
+    ctx.moveTo(s.x1*sc+ox, s.y1*sc+oy);
+    ctx.lineTo(s.x2*sc+ox, s.y2*sc+oy);
+    ctx.strokeStyle=`hsl(${90+t*40},60%,${30+t*20}%)`;
+    ctx.lineWidth=3-t*2.5;
+    ctx.lineCap='round';
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Turing Patterns (Gray-Scott)
+// ═══════════════════════════════════════════════
+let turingGrid = null;
+let turingRunning = false;
+
+function initTuring() {
+  const size = params.turing_size || 100;
+  const grid = { w:size, h:size, a:new Float32Array(size*size), b:new Float32Array(size*size) };
+  for(let i=0;i<size*size;i++){grid.a[i]=1;grid.b[i]=0;}
+  // Seed
+  let seed=42;
+  const rand=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let s=0;s<6;s++){
+    const cx=Math.floor(rand()*size),cy=Math.floor(rand()*size),sz=3+Math.floor(rand()*8);
+    for(let dy=0;dy<sz;dy++)for(let dx=0;dx<sz;dx++){
+      const i=((cy+dy)%size)*size+((cx+dx)%size);
+      grid.a[i]=0;grid.b[i]=1;
+    }
+  }
+  turingGrid=grid;
+}
+
+function stepTuring(steps) {
+  const g=turingGrid;
+  if(!g)return;
+  const presets={spots:{f:0.035,k:0.065},stripes:{f:0.04,k:0.06},coral:{f:0.06,k:0.062},mitosis:{f:0.028,k:0.062},worms:{f:0.058,k:0.065}};
+  const p=presets[params.turing_preset||'spots']||presets.spots;
+  const da=1.0,db=0.5,w=g.w,h=g.h;
+  for(let s=0;s<steps;s++){
+    const na=new Float32Array(w*h),nb=new Float32Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;
+      const l=y*w+((x-1+w)%w), r=y*w+((x+1)%w), u=((y-1+h)%h)*w+x, d=((y+1)%h)*w+x;
+      const la=g.a[l]+g.a[r]+g.a[u]+g.a[d]-4*g.a[i];
+      const lb=g.b[l]+g.b[r]+g.b[u]+g.b[d]-4*g.b[i];
+      const ab2=g.a[i]*g.b[i]*g.b[i];
+      na[i]=Math.min(1,Math.max(0,g.a[i]+da*la-ab2+p.f*(1-g.a[i])));
+      nb[i]=Math.min(1,Math.max(0,g.b[i]+db*lb+ab2-(p.k+p.f)*g.b[i]));
+    }
+    g.a=na;g.b=nb;
+  }
+}
+
+function drawTuring() {
+  if(!turingGrid)initTuring();
+  stepTuring(params.turing_batch||20);
+  const g=turingGrid;
+  const scale=Math.min(Math.floor(ctx.w/g.w),Math.floor(ctx.h/g.h));
+  const ox=(ctx.w-g.w*scale)/2, oy=(ctx.h-g.h*scale)/2;
+  const imgData=ctx.createImageData(g.w*scale,g.h*scale);
+  for(let y=0;y<g.h;y++)for(let x=0;x<g.w;x++){
+    const v=g.b[y*g.w+x];
+    const r=Math.floor(v*255),gr=Math.floor(v*0.6*255),b=Math.min(255,50+Math.floor(v*128));
+    for(let sy=0;sy<scale;sy++)for(let sx=0;sx<scale;sx++){
+      const idx=((y*scale+sy)*g.w*scale+(x*scale+sx))*4;
+      imgData.data[idx]=r;imgData.data[idx+1]=gr;imgData.data[idx+2]=b;imgData.data[idx+3]=255;
+    }
+  }
+  clear();
+  ctx.putImageData(imgData,ox,oy);
+}
+
+let turingAnimId=null;
+function animateTuring(){
+  drawTuring();
+  if(turingRunning) turingAnimId=requestAnimationFrame(animateTuring);
+}
+
+// ═══════════════════════════════════════════════
+//  Tessellations
+// ═══════════════════════════════════════════════
+function drawTessellation() {
+  clear();
+  const type = params.tess_type || 'hexagon';
+  const size = params.tess_size || 30;
+  const cx = ctx.w, cy = ctx.h;
+
+  if (type === 'hexagon') {
+    const h = size * Math.sqrt(3);
+    const cols = Math.ceil(cx / (size * 1.5)) + 2;
+    const rows = Math.ceil(cy / h) + 2;
+    for (let r = -1; r < rows; r++) {
+      for (let c = -1; c < cols; c++) {
+        const x = c * size * 1.5;
+        const y = r * h + (c % 2 ? h/2 : 0);
+        const hue = ((x+y)*0.3) % 360;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = Math.PI/6 + i * Math.PI/3;
+          const px = x + size * Math.cos(a);
+          const py = y + size * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `hsl(${hue},50%,25%)`;
+        ctx.fill();
+        ctx.strokeStyle = `hsl(${hue},60%,45%)`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+  } else if (type === 'voronoi') {
+    // Simple Voronoi via distance
+    let seed = 42;
+    const rand = () => { seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+    const nPts = params.tess_points || 40;
+    const sites = [];
+    for (let i = 0; i < nPts; i++) sites.push({x:rand()*cx, y:rand()*cy, hue:rand()*360});
+    const step = 4;
+    for (let y = 0; y < cy; y += step) {
+      for (let x = 0; x < cx; x += step) {
+        let minD = Infinity, closest = sites[0];
+        for (const s of sites) {
+          const d = (x-s.x)**2 + (y-s.y)**2;
+          if (d < minD) { minD = d; closest = s; }
+        }
+        ctx.fillStyle = `hsl(${closest.hue},40%,${25+Math.sqrt(minD)*0.05}%)`;
+        ctx.fillRect(x, y, step, step);
+      }
+    }
+    // Draw edges
+    for (const s of sites) {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Fibonacci Spiral (Golden Rectangles)
+// ═══════════════════════════════════════════════
+function drawFibonacci() {
+  clear();
+  const n = params.fib_count || 10;
+  const fibs = [1,1];
+  for(let i=2;i<n;i++) fibs.push(fibs[i-1]+fibs[i-2]);
+  // Calculate total size
+  const cx=ctx.w/2, cy=ctx.h/2;
+  const maxFib = fibs[fibs.length-1];
+  const scale = Math.min(ctx.w,ctx.h)*0.4/maxFib;
+
+  // Draw golden rectangles
+  let x=cx,y=cy,dir=0;
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#9b59b6','#e74c3c','#f39c12','#2ecc71','#3498db','#8e44ad','#e67e22','#1abc9c'];
+
+  for(let i=0;i<fibs.length;i++){
+    const s=fibs[i]*scale;
+    ctx.strokeStyle=colors[i%colors.length];
+    ctx.lineWidth=2;
+    ctx.globalAlpha=0.4;
+    // Rectangle
+    let rx,ry;
+    if(dir===0){rx=x;ry=y-s;}
+    else if(dir===1){rx=x;ry=y;}
+    else if(dir===2){rx=x-s;ry=y;}
+    else{rx=x-s;ry=y-s;}
+    ctx.strokeRect(rx,ry,s,s);
+    // Arc
+    ctx.globalAlpha=0.9;
+    ctx.beginPath();
+    let startAngle,arcCX,arcCY;
+    if(dir===0){arcCX=rx;arcCY=ry+s;startAngle=-Math.PI/2;}
+    else if(dir===1){arcCX=rx;arcCY=ry;startAngle=0;}
+    else if(dir===2){arcCX=rx+s;arcCY=ry;startAngle=Math.PI/2;}
+    else{arcCX=rx+s;arcCY=ry+s;startAngle=Math.PI;}
+    ctx.arc(arcCX,arcCY,s,startAngle,startAngle+Math.PI/2);
+    ctx.strokeStyle=colors[i%colors.length];
+    ctx.lineWidth=2.5;
+    ctx.stroke();
+    // Move to next position
+    if(dir===0){x=rx+s;y=ry;}
+    else if(dir===1){x=rx+s;y=ry+s;}
+    else if(dir===2){x=rx;y=ry+s;}
+    else{x=rx;y=ry;}
+    dir=(dir+1)%4;
+  }
+  ctx.globalAlpha=1;
+  // Label
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font='12px monospace';
+  ctx.fillText(`Fibonacci: ${fibs.join(', ')}`,10,ctx.h-10);
+}
+
+// ═══════════════════════════════════════════════
+//  Symmetry
+// ═══════════════════════════════════════════════
+function drawSymmetry() {
+  clear();
+  const type = params.sym_type || 'radial';
+  const folds = params.sym_folds || 6;
+  const cx = ctx.w/2, cy = ctx.h/2;
+  const maxR = Math.min(cx,cy)*0.8;
+
+  if (type === 'radial') {
+    // Snowflake-like radial symmetry
+    for (let f = 0; f < folds; f++) {
+      const baseAngle = (f / folds) * Math.PI * 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(baseAngle);
+      // Draw a decorative arm
+      drawSymArm(maxR, folds);
+      // Mirror
+      ctx.scale(1, -1);
+      drawSymArm(maxR, folds);
+      ctx.restore();
+    }
+  } else if (type === 'bilateral') {
+    // Butterfly-like bilateral symmetry
+    const wing = (side) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(side, 1);
+      // Wing shape
+      for (let i = 0; i < 5; i++) {
+        const r = maxR * (0.3 + i * 0.15);
+        const hue = i * 60;
+        ctx.beginPath();
+        ctx.ellipse(r*0.4, -r*0.2, r*0.5, r*0.3, -0.3, 0, Math.PI*2);
+        ctx.fillStyle = `hsla(${hue},70%,50%,0.3)`;
+        ctx.fill();
+        ctx.strokeStyle = `hsl(${hue},70%,60%)`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      // Body line
+      ctx.beginPath();
+      ctx.moveTo(0, -maxR*0.6);
+      ctx.lineTo(0, maxR*0.6);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    };
+    wing(1);
+    wing(-1);
+    // Axis
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-maxR);
+    ctx.lineTo(cx, cy+maxR);
+    ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawSymArm(maxR, folds) {
+  const branches = 4;
+  for (let b = 0; b < branches; b++) {
+    const r = maxR * (b + 1) / branches;
+    const size = maxR / branches * 0.4;
+    const hue = b * 90 + 180;
+    // Main branch
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(r, 0);
+    ctx.strokeStyle = `hsl(${hue},60%,60%)`;
+    ctx.lineWidth = 2 - b * 0.3;
+    ctx.stroke();
+    // Crystal tips
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(r + size * 0.7, -size * 0.4);
+    ctx.moveTo(r, 0);
+    ctx.lineTo(r + size * 0.7, size * 0.4);
+    ctx.strokeStyle = `hsl(${hue},50%,70%)`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Dot
+    ctx.beginPath();
+    ctx.arc(r, 0, 3, 0, Math.PI*2);
+    ctx.fillStyle = `hsl(${hue},60%,70%)`;
+    ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Drawing dispatcher
+// ═══════════════════════════════════════════════
+function draw() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if (turingAnimId) { cancelAnimationFrame(turingAnimId); turingAnimId = null; turingRunning = false; }
+  const drawFns = {
+    phyllotaxis: drawPhyllotaxis,
+    fractals_fern: drawFern,
+    fractals_koch: drawKoch,
+    fractals_mandelbrot: drawMandelbrot,
+    spirals: drawSpirals,
+    chaos_lorenz: drawLorenz,
+    chaos_logistic: drawLogistic,
+    lsystem: drawLSystem,
+    turing: () => { turingGrid=null; initTuring(); turingRunning=true; animateTuring(); },
+    tessellation: drawTessellation,
+    fibonacci: drawFibonacci,
+    symmetry: drawSymmetry,
+  };
+  const fn = drawFns[currentCat];
+  if (fn) fn();
+}
+
+// ═══════════════════════════════════════════════
+//  Category configs (controls + info)
+// ═══════════════════════════════════════════════
+const catConfigs = {
+  phyllotaxis: {
+    controls: [
+      {id:'count',label:'Number of Seeds',type:'range',min:10,max:2000,step:10,default:500},
+      {id:'angle',label:'Divergence Angle (°)',type:'range',min:0,max:360,step:0.001,default:137.508},
+      {id:'scale',label:'Spacing Scale',type:'range',min:1,max:15,step:0.1,default:4},
+      {id:'colorScheme',label:'Color Scheme',type:'select',options:['spiral','radius','fibonacci','golden']},
+    ],
+    info: {
+      title:'🌻 The Mathematics of Plant Growth',
+      html:`<p>Plants arrange leaves, seeds, and petals using the <strong>golden angle</strong> — approximately <span class="math">137.508°</span>. This is the angle that divides a circle in the golden ratio.</p>
+<div class="formula-block">θₙ = n × 137.508°<br>rₙ = c × √n<br><br>Golden angle = 360° × (2 - φ) = 360° / φ²<br>where φ = (1 + √5) / 2 ≈ 1.618</div>
+<p>This angle is special because it's the <em>most irrational</em> number — it avoids creating gaps or overlapping lines, giving optimal packing. Try changing the angle: even <span class="math">137.5°</span> vs <span class="math">137.508°</span> looks different!</p>
+<p><strong>Parastichy spirals:</strong> Count the visible spirals — they're always consecutive Fibonacci numbers (21/34, 55/89).</p>
+<div class="nature-examples"><span class="nature-tag">🌻 Sunflower heads</span><span class="nature-tag">🌹 Rose petals</span><span class="nature-tag">🍍 Pineapple scales</span><span class="nature-tag">🌲 Pine cones</span><span class="nature-tag">🥬 Romanesco</span></div>`
+    }
+  },
+  fractals_fern: {
+    controls: [
+      {id:'iterations',label:'Points',type:'range',min:1000,max:100000,step:1000,default:50000},
+      {id:'fern_a2',label:'Left Leaflet (a)',type:'range',min:-0.5,max:0.5,step:0.01,default:0.2},
+      {id:'fern_b2',label:'Left Leaflet (b)',type:'range',min:-0.5,max:0.5,step:0.01,default:-0.26},
+      {id:'fern_a3',label:'Right Leaflet (a)',type:'range',min:-0.5,max:0.5,step:0.01,default:-0.15},
+      {id:'fern_b3',label:'Right Leaflet (b)',type:'range',min:-0.5,max:0.5,step:0.01,default:0.28},
+    ],
+    info: {
+      title:'🌿 The Barnsley Fern',
+      html:`<p>Michael Barnsley discovered that a realistic fern can be generated from just <strong>four affine transformations</strong>, each chosen randomly with different probabilities.</p>
+<div class="formula-block">f₁: (x,y) → (0, 0.16y)           p=1%  [stem]<br>f₂: (x,y) → (0.85x+0.04y, -0.04x+0.85y+1.6)  p=85% [main]<br>f₃: (x,y) → (0.2x-0.26y, 0.23x+0.22y+1.6)   p=7%  [left]<br>f₄: (x,y) → (-0.15x+0.28y, 0.26x+0.24y+0.44) p=7%  [right]</div>
+<p>This is an <strong>Iterated Function System (IFS)</strong> — the same principle behind image compression. Fractal dimension ≈ 1.45.</p>
+<p>Try adjusting the leaflet parameters to create different fern species!</p>
+<div class="nature-examples"><span class="nature-tag">🌿 Fern fronds</span><span class="nature-tag">🥦 Romanesco</span><span class="nature-tag">⚡ Lightning</span><span class="nature-tag">🫁 Lung bronchi</span></div>`
+    }
+  },
+  fractals_koch: {
+    controls: [
+      {id:'koch_iter',label:'Iterations',type:'range',min:0,max:7,step:1,default:4},
+    ],
+    info: {
+      title:'❄️ Koch Snowflake — Infinite Perimeter, Finite Area',
+      html:`<p>Start with a triangle. Replace each line segment's middle third with an equilateral bump. Repeat forever.</p>
+<div class="formula-block">Perimeter = 3s × (4/3)ⁿ → ∞<br>Area = (2s²√3/5) × (1 - (4/9)ⁿ × ...) → finite<br>Fractal dimension = ln(4)/ln(3) ≈ 1.2619</div>
+<p>A curve with <strong>infinite length</strong> enclosing a <strong>finite area</strong>. The perimeter grows by 4/3 each iteration while the area converges.</p>
+<div class="nature-examples"><span class="nature-tag">❄️ Snowflakes</span><span class="nature-tag">🏔️ Coastlines</span><span class="nature-tag">🫧 Crystal growth</span></div>`
+    }
+  },
+  fractals_mandelbrot: {
+    controls: [
+      {id:'mandel_iter',label:'Max Iterations',type:'range',min:20,max:500,step:10,default:80},
+      {id:'mandel_zoom',label:'Zoom',type:'range',min:0.5,max:100,step:0.5,default:1},
+      {id:'mandel_cx',label:'Center X',type:'range',min:-2.5,max:1,step:0.01,default:-0.5},
+      {id:'mandel_cy',label:'Center Y',type:'range',min:-1.5,max:1.5,step:0.01,default:0},
+    ],
+    info: {
+      title:'🔮 The Mandelbrot Set',
+      html:`<p>The most famous fractal: iterate <span class="math">z → z² + c</span> and color based on how fast it escapes.</p>
+<div class="formula-block">z₀ = 0<br>zₙ₊₁ = zₙ² + c<br><br>Point c is IN the set if |zₙ| stays bounded.<br>Color = escape iteration count.</div>
+<p>The boundary has <strong>infinite complexity at every scale</strong>. Zoom into the edges to find miniature copies of the whole set — self-similarity across scales.</p>
+<p>Try zooming to: Center X = <span class="math">-0.745</span>, Y = <span class="math">0.186</span>, Zoom = <span class="math">50</span></p>
+<div class="nature-examples"><span class="nature-tag">🔬 Infinite detail</span><span class="nature-tag">🌊 Julia sets</span><span class="nature-tag">📐 Complex dynamics</span></div>`
+    }
+  },
+  spirals: {
+    controls: [
+      {id:'spiral_type',label:'Spiral Type',type:'select',options:['golden','logarithmic','archimedean','fermat']},
+      {id:'spiral_turns',label:'Turns',type:'range',min:1,max:20,step:0.5,default:6},
+      {id:'spiral_pts',label:'Resolution',type:'range',min:100,max:5000,step:100,default:2000},
+    ],
+    info: {
+      title:'🐚 The Language of Spirals',
+      html:`<p>Spirals appear when growth combines with rotation. Different growth laws produce different spirals:</p>
+<div class="formula-block"><strong>Logarithmic:</strong> r = a × e^(bθ)    [nautilus, galaxies]<br><strong>Archimedean:</strong> r = a + bθ         [watch springs, ropes]<br><strong>Fermat:</strong>      r = a × √θ         [sunflower background]<br><strong>Golden:</strong>      r = a × φ^(2θ/π)   [special log spiral]</div>
+<p>The <strong>golden spiral</strong> is a logarithmic spiral that grows by φ every quarter turn. It approximates the spiral in nautilus shells, galaxy arms, and hurricane formations.</p>
+<div class="nature-examples"><span class="nature-tag">🐚 Nautilus shell</span><span class="nature-tag">🌀 Galaxy arms</span><span class="nature-tag">🌪️ Hurricanes</span><span class="nature-tag">🧬 DNA helix</span><span class="nature-tag">🐏 Ram horns</span></div>`
+    }
+  },
+  chaos_lorenz: {
+    controls: [
+      {id:'lorenz_sigma',label:'σ (Prandtl)',type:'range',min:1,max:30,step:0.5,default:10},
+      {id:'lorenz_rho',label:'ρ (Rayleigh)',type:'range',min:0.1,max:50,step:0.5,default:28},
+      {id:'lorenz_beta',label:'β',type:'range',min:0.1,max:8,step:0.1,default:2.667},
+      {id:'lorenz_steps',label:'Time Steps',type:'range',min:5000,max:50000,step:1000,default:20000},
+    ],
+    info: {
+      title:'🦋 The Lorenz Attractor',
+      html:`<p>In 1963, meteorologist Edward Lorenz discovered that a simplified weather model produces beautiful, never-repeating trajectories shaped like a butterfly.</p>
+<div class="formula-block">dx/dt = σ(y - x)<br>dy/dt = x(ρ - z) - y<br>dz/dt = xy - βz<br><br>Classic parameters: σ=10, ρ=28, β=8/3</div>
+<p>The <strong>butterfly effect</strong>: two starting points differing by 10⁻¹⁰ diverge completely within seconds. Deterministic but unpredictable — this is <strong>chaos</strong>.</p>
+<p>The trajectory never crosses itself and never repeats, yet stays confined to a strange attractor with fractal dimension ≈ 2.06.</p>
+<div class="nature-examples"><span class="nature-tag">🌤️ Weather</span><span class="nature-tag">💓 Heart rhythms</span><span class="nature-tag">🌊 Turbulence</span><span class="nature-tag">🪐 Orbital mechanics</span></div>`
+    }
+  },
+  chaos_logistic: {
+    controls: [
+      {id:'logistic_rmin',label:'r min',type:'range',min:0,max:3.5,step:0.1,default:2.5},
+      {id:'logistic_rmax',label:'r max',type:'range',min:3,max:4,step:0.01,default:4.0},
+    ],
+    info: {
+      title:'📈 The Logistic Map — Order to Chaos',
+      html:`<p>The simplest equation that produces chaos:</p>
+<div class="formula-block">xₙ₊₁ = r × xₙ × (1 - xₙ)<br><br>r < 3.0:  stable fixed point<br>r ≈ 3.0:  period-2 oscillation<br>r ≈ 3.45: period-4 oscillation<br>r ≈ 3.57: onset of chaos (Feigenbaum point)<br>r = 4.0:  full chaos</div>
+<p>The <strong>Feigenbaum constant</strong> δ ≈ 4.6692 describes the rate of period-doubling — and it's <em>universal</em>, appearing in all period-doubling cascades in nature.</p>
+<div class="nature-examples"><span class="nature-tag">🐰 Population dynamics</span><span class="nature-tag">💧 Dripping faucet</span><span class="nature-tag">📡 Signal processing</span></div>`
+    }
+  },
+  lsystem: {
+    controls: [
+      {id:'lsys_type',label:'System',type:'select',options:['plant','tree','koch','dragon','sierpinski']},
+      {id:'lsys_iter',label:'Iterations',type:'range',min:1,max:7,step:1,default:5},
+      {id:'lsys_angle',label:'Branch Angle (°)',type:'range',min:5,max:90,step:1,default:25},
+      {id:'lsys_step',label:'Step Length',type:'range',min:1,max:15,step:0.5,default:4},
+    ],
+    info: {
+      title:'🌳 L-Systems — Growing Trees from Grammars',
+      html:`<p>Aristid Lindenmayer invented L-systems in 1968 to model plant growth. A simple string-rewriting grammar + turtle graphics produces stunning botanical structures.</p>
+<div class="formula-block"><strong>Plant:</strong><br>Axiom: X<br>X → F+[[X]-X]-F[-FX]+X<br>F → FF<br><br>F=draw  +=turn left  -=turn right<br>[=save position  ]=restore position</div>
+<p>The same principle generates trees, ferns, corals, blood vessels, rivers, and lightning. Nature reuses branching patterns because they're optimal for distribution networks.</p>
+<div class="nature-examples"><span class="nature-tag">🌳 Trees</span><span class="nature-tag">🫁 Lungs</span><span class="nature-tag">🩸 Blood vessels</span><span class="nature-tag">⚡ Lightning</span><span class="nature-tag">🏞️ River deltas</span></div>`
+    }
+  },
+  turing: {
+    controls: [
+      {id:'turing_preset',label:'Pattern',type:'select',options:['spots','stripes','coral','mitosis','worms']},
+      {id:'turing_size',label:'Grid Size',type:'range',min:50,max:200,step:10,default:100},
+      {id:'turing_batch',label:'Steps per Frame',type:'range',min:5,max:100,step:5,default:20},
+    ],
+    info: {
+      title:'🐆 Turing Patterns — How Leopards Get Spots',
+      html:`<p>In 1952, Alan Turing showed that two interacting chemicals (morphogens) diffusing at different rates can spontaneously create stable patterns.</p>
+<div class="formula-block"><strong>Gray-Scott Model:</strong><br>∂A/∂t = Dₐ∇²A - AB² + f(1-A)<br>∂B/∂t = D_b∇²B + AB² - (k+f)B<br><br>f = feed rate (replenish A)<br>k = kill rate (remove B)<br>Different f,k → different patterns!</div>
+<p>By tuning just two parameters (feed and kill rate), the same equation produces spots, stripes, labyrinthine patterns, and traveling waves.</p>
+<div class="nature-examples"><span class="nature-tag">🐆 Leopard spots</span><span class="nature-tag">🦓 Zebra stripes</span><span class="nature-tag">🐚 Seashell pigments</span><span class="nature-tag">🧠 Brain coral</span><span class="nature-tag">🐡 Angelfish</span></div>`
+    }
+  },
+  tessellation: {
+    controls: [
+      {id:'tess_type',label:'Type',type:'select',options:['hexagon','voronoi']},
+      {id:'tess_size',label:'Cell Size',type:'range',min:10,max:80,step:2,default:30},
+      {id:'tess_points',label:'Voronoi Points',type:'range',min:10,max:100,step:5,default:40},
+    ],
+    info: {
+      title:'🍯 Tessellations — Why Bees Chose Hexagons',
+      html:`<p>Hexagons tile the plane with the <strong>minimum perimeter per unit area</strong> — the Honeycomb Conjecture, proven in 1999 by Thomas Hales.</p>
+<div class="formula-block">Regular polygon tilings: triangle, square, hexagon<br><br>Perimeter per unit area:<br>  Triangle: 2×3^(1/4) ≈ 2.632<br>  Square:   4/1 = 4.000<br>  Hexagon:  2×(4/3)^(1/4) ≈ 2.149  ← winner!</div>
+<p><strong>Voronoi diagrams</strong> partition space by nearest-neighbor distance, naturally arising in giraffe skin patterns, dragonfly wings, and cracked mud.</p>
+<div class="nature-examples"><span class="nature-tag">🍯 Honeycombs</span><span class="nature-tag">🦒 Giraffe skin</span><span class="nature-tag">🐢 Turtle shells</span><span class="nature-tag">🫧 Soap bubbles</span><span class="nature-tag">🌍 Basalt columns</span></div>`
+    }
+  },
+  fibonacci: {
+    controls: [
+      {id:'fib_count',label:'Fibonacci Terms',type:'range',min:3,max:14,step:1,default:10},
+    ],
+    info: {
+      title:'🔢 The Fibonacci Spiral',
+      html:`<p>Build squares with Fibonacci side lengths (1,1,2,3,5,8,13,...) and connect quarter-circle arcs — you get the <strong>golden spiral</strong>.</p>
+<div class="formula-block">F(n) = F(n-1) + F(n-2)<br>F(n)/F(n-1) → φ ≈ 1.618033...<br><br>1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89...<br><br>Flower petals often come in Fibonacci numbers:<br>  Lily=3, Buttercup=5, Delphinium=8,<br>  Marigold=13, Daisy=21 or 34</div>
+<p>The convergence of F(n)/F(n-1) to φ is the <em>slowest possible</em> — making φ the "most irrational" number, which is exactly why it appears in optimal packing.</p>
+<div class="nature-examples"><span class="nature-tag">🌼 Flower petals</span><span class="nature-tag">🐚 Shell chambers</span><span class="nature-tag">🌻 Seed spirals</span><span class="nature-tag">🍍 Pineapple</span></div>`
+    }
+  },
+  symmetry: {
+    controls: [
+      {id:'sym_type',label:'Symmetry Type',type:'select',options:['radial','bilateral']},
+      {id:'sym_folds',label:'Folds (Radial)',type:'range',min:3,max:12,step:1,default:6},
+    ],
+    info: {
+      title:'🦋 Symmetry in Nature',
+      html:`<p>Symmetry is everywhere because physical laws don't prefer any direction.</p>
+<div class="formula-block"><strong>Bilateral:</strong> one mirror plane (humans, butterflies, leaves)<br><strong>Radial:</strong> multiple rotational axes (starfish=5, snowflakes=6)<br><strong>Rotational:</strong> invariant under rotation (jellyfish)</div>
+<p><strong>Bilateral symmetry</strong> evolved because animals move in one direction — they need a front and back, but left and right are equivalent. <strong>Radial symmetry</strong> appears in organisms that don't move or float freely.</p>
+<p>Snowflakes have 6-fold symmetry because water molecules form hexagonal crystals at 120° angles.</p>
+<div class="nature-examples"><span class="nature-tag">🦋 Butterflies</span><span class="nature-tag">⭐ Starfish (5-fold)</span><span class="nature-tag">❄️ Snowflakes (6-fold)</span><span class="nature-tag">🌸 Flowers</span></div>`
+    }
+  },
+};
+
+// ═══════════════════════════════════════════════
+//  Load category
+// ═══════════════════════════════════════════════
+function loadCategory(id) {
+  currentCat = id;
+  buildNav();
+  const cat = categories.find(c => c.id === id);
+  const cfg = catConfigs[id];
+  if (!cat || !cfg) return;
+
+  document.getElementById('title').textContent = cat.icon + ' ' + cat.label;
+  document.getElementById('subtitle').textContent = cat.subtitle;
+
+  // Build controls
+  const controlsDiv = document.getElementById('controls');
+  let html = '<h3>⚙️ Parameters</h3><div class="control-grid">';
+  for (const c of cfg.controls) {
+    if (c.type === 'range') {
+      const val = params[c.id] !== undefined ? params[c.id] : c.default;
+      params[c.id] = val;
+      html += `<div class="control-item"><label>${c.label} <span class="value" id="val_${c.id}">${val}</span></label>
+<input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}" oninput="setParam('${c.id}',this.value,${c.default})"></div>`;
+    } else if (c.type === 'select') {
+      html += `<div class="control-item"><label>${c.label}</label><select onchange="setParam('${c.id}',this.value)">`;
+      for (const opt of c.options) {
+        const sel = params[c.id] === opt ? 'selected' : '';
+        html += `<option value="${opt}" ${sel}>${opt.charAt(0).toUpperCase()+opt.slice(1)}</option>`;
+      }
+      html += '</select></div>';
+    }
+  }
+  html += '</div><div class="btn-row"><button class="btn btn-primary" onclick="draw()">🔄 Regenerate</button><button class="btn btn-secondary" onclick="resetParams()">Reset Defaults</button></div>';
+  controlsDiv.innerHTML = html;
+
+  // Info panel
+  document.getElementById('info').innerHTML = `<h3>${cfg.info.title}</h3>${cfg.info.html}`;
+
+  resize();
+}
+
+function setParam(id, value, dflt) {
+  const num = parseFloat(value);
+  params[id] = isNaN(num) ? value : num;
+  const valSpan = document.getElementById('val_' + id);
+  if (valSpan) valSpan.textContent = value;
+  draw();
+}
+
+function resetParams() {
+  const cfg = catConfigs[currentCat];
+  if (!cfg) return;
+  for (const c of cfg.controls) {
+    if (c.default !== undefined) params[c.id] = c.default;
+  }
+  loadCategory(currentCat);
+}
+
+// ═══════════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════════
+buildNav();
+loadCategory('phyllotaxis');
+</script>
+</body>
+</html>

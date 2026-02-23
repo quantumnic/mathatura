@@ -1,0 +1,12 @@
+[package]
+name = "mathatura"
+version = "0.1.0"
+edition = "2021"
+description = "The beauty of mathematics in nature — interactive simulations of phyllotaxis, fractals, spirals, chaos, L-systems, Turing patterns, and more"
+license = "MIT"
+repository = "https://github.com/redbasecap-buiss/mathatura"
+keywords = ["mathematics", "nature", "fibonacci", "fractals", "visualization"]
+categories = ["science", "visualization"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }

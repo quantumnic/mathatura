@@ -13,7 +13,7 @@ struct Cli {
     command: Commands,
 
     /// Output file path
-    #[arg(short, long, default_value = "output.svg")]
+    #[arg(short, long, global = true, default_value = "output.svg")]
     output: PathBuf,
 }
 

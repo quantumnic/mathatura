@@ -295,6 +295,8 @@ function restoreViewTransform() {
 }
 
 // Mouse wheel zoom
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 const canvasWrap = document.getElementById('canvas-wrap');
 canvasWrap.addEventListener('wheel', function(e) {
   e.preventDefault();
@@ -417,8 +419,6 @@ canvas.addEventListener('touchend', function(e) {
 // ═══════════════════════════════════════════════
 //  Canvas & Animation
 // ═══════════════════════════════════════════════
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
 let animId = null;
 let params = {};
 

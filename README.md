@@ -171,9 +171,8 @@ mathatura/
 │       ├── chaos.rs         # Lorenz attractor, logistic map
 │       ├── lsystems.rs      # Lindenmayer systems
 │       └── turing.rs        # Gray-Scott reaction-diffusion
-├── web/
-│   └── index.html           # Interactive gallery (50KB single-file)
-└── examples/
+└── web/
+    └── index.html           # Interactive gallery (single-file)
 ```
 
 ## 🔮 Roadmap
